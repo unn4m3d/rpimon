@@ -1,4 +1,4 @@
-rmon
+RPiMon
 ==
 
 *RPiMon* is a small daemon for getting system info through HTTP.
