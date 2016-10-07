@@ -62,17 +62,7 @@ def logged_in
 end
 
 def uptime
-	`uptime`.strip.match(/up (?<uptime>.*),\s+\d+ user/).transform do |md|
-		days = md[:uptime].match(/(?<d>\d+) days/)
-		days = days ? days[:d] : 0
-		time = md[:uptime].match(/(?<h>\d{1,2}):(?<m>\d{1,2})/)
-		if time
-			hours,minutes = time[:h].to_i, time[:m].to_i
-		else
-			hours,minutes = 0,0
-		end
-		{ days: days, hours: hours, minutes: minutes }
-	end
+	`uptime -p`.sub(/^up/,'')
 end
 
 require 'optparse'
