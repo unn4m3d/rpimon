@@ -5,7 +5,7 @@ RPiMon
 
 Its name means *RaspberryPi Monitoring*, because it's originally developed for Raspberry Pi (tested on RPi2).
 
-At the moment, it needs `/opt/vc/bin/vcgencmd` to be present (to read temperature).
+It needs `/opt/vc/bin/vcgencmd` to be present (to read temperature).
 
 Installation
 --
