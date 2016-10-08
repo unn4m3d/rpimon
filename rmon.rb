@@ -1,3 +1,4 @@
+#!/usr/bin/ruby
 require 'webrick'
 require 'json'
 
@@ -35,15 +36,25 @@ def memory_usage
 end
 
 def temperature
-	if Process.uid == 0
-		`/opt/vc/bin/vcgencmd measure_temp`.sub(/^temp=/,'').strip
-	else
-		File.read("/etc/rmon/temp")
-	end
+	[{
+		name: "CPU Temp",
+		value: (Process.uid == 0 ? `/opt/vc/bin/vcgencmd measure_temp`.sub(/^temp=/,'').sub("'",'°') : File.read("/usr/share/rpimon/temp"))
+	}]
+
 end
 
 def cpu_usage
-	`mpstat | awk '$12 ~ /[0-9.]+/ { print 100 - $12 }'`.strip
+	if Process.uid == 0
+		[{core: "All", load: `mpstat | awk '$12 ~ /[0-9.]+/ { print 100 - $12 }'`.strip}]
+	else
+		`mpstat -P ALL 1 1`.split("\n\n")[1].split("\n")[1..-1].map do |x|
+			x = x.split(/[^\d\.%:a-zA-Z]+/)
+			{
+				core:x[1],
+				load:100.0 - x[11]
+			}
+		end
+	end
 end
 
 def logged_in
@@ -98,13 +109,25 @@ OptionParser.new do |opts|
 		options.default_display = s
 	end
 
+	opts.on("-cFILE","--conf=FILE","Use config file") do |f|
+		if File.exists?(f)
+			json = JSON.parse File.read f
+			options.default_display = json[:default_display]
+			options.auth_url = json[:auth_url]
+			options.port = json[:port]
+			options.verbose = json[:verbose]
+		else
+			puts "Warning : no config file"
+		end
+	end
+
 	opts.on("-h","--help","Print this help and exit") do
 		puts opts
 		exit
 	end
 end.parse!
 
-server = WEBrick::HTTPServer.new :Port => options.port || 1337
+server = WEBrick::HTTPServer.new :Port => options.port
 
 trap 'INT' do
 	server.shutdown
@@ -115,7 +138,7 @@ trap 'TERM' do
 end
 
 server.mount_proc '/' do |req, res|
-	result = {}
+	result = {:rmon_version => RMON_VER}
 	begin
 		req.query['show'] ||= options.default_display
 		for val in req.query['show'].split(",")
